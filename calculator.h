@@ -3,6 +3,7 @@
 
 void ListClasses();
 void AddClass();
+void InitClass(char filename[]);
 
 
 #endif // CALCULATOR_H
