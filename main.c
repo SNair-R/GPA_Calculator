@@ -17,7 +17,7 @@ int main(void)
         switch (choice)
         {
             case 1:
-                printf("Sorry havent done this yet\n");
+                AddGrades();
                 break;
             case 2:
                 AddClass();
