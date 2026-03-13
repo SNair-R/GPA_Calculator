@@ -55,7 +55,7 @@ void InitClass(FILE *f)
     scanf("%d", &topics);
     fprintf(f, "%d\n%d\n", credits, topics);
 
-    char topicname[10][50];
+    char topicname[topics][50];
     int weight;
     for (int i = 0; i < topics; i++) // using topic number loops through to get name for each topic and stores it
     {
@@ -133,21 +133,92 @@ void AddGrades()
         strcpy(topicnames[i], line + 1);
     }
 
-    printf("\n=== \033[1;34mTopics\033[0m ===\n");
-    for (int i = 0; i < topics; i++ )
+    int maincheck = 0;
+    do
     {
-        printf("- %s\n", topicnames[i]);
+        printf("\n=== \033[1;34mTopics\033[0m ===\n");
+        for (int i = 0; i < topics; i++ )
+        {
+            printf("- %s\n", topicnames[i]);
+        }
+        
+        char chosentopic[100];
+        int assurance = 0;
+        int index;
+
+        while (!assurance)
+        {
+            printf("Choose a topic to add a grade in\n"); // gets the topicname to add grades in
+            scanf(" %[^\n]", chosentopic);
+            for (int i = 0; i < topics; i++)
+            {
+                if (strcmp(chosentopic, topicnames[i]) == 0)
+                {
+                    index = i;
+                    assurance = 1;
+                    break;
+                }
+            }
+            if (!assurance)
+            {
+                printf("Topic not found try again");
+            }
+        }
+
+
+        fclose(f);
+
+        f = fopen(filename, "r+");
+        for (int i = 0; i < 3 + topics + index; i++) // seek to get to appropriate topic in text file
+        {
+            fgets(line, sizeof(line), f);
+        }
+        fgets(line, sizeof(line), f); // skips to the end of the target line according to OS
+        #ifdef _WIN32
+            fseek(f, -2, SEEK_CUR); // \r\n on Windows
+        #else
+            fseek(f, -1, SEEK_CUR); // \n on Linux/Mac
+        #endif
+
+
+        int grade_amt;
+        printf("\nHow many grades would you like to add?\n");
+        scanf(" %d", &grade_amt);
+
+        int grade;
+        for (int i = 0; i < grade_amt; i++)
+        {
+            printf("\n What is grade %d you would like to add? ", i + 1);
+            scanf(" %d", &grade);
+            fprintf(f, "%d ", grade);
+        }
+
+        int check2 = 0;
+        while (!check2)
+        {
+            char answer;
+            printf("\nWould you like to add more grades in this class (Y/N)? ");
+            scanf(" %c", &answer);
+            if (answer == 'Y' || answer == 'y')
+            {
+                freopen(filename, "r", f);
+                check2++;
+                break;
+            }
+            else if (answer == 'N' || answer == 'n')
+            {
+                check2++;
+                maincheck++;
+                return;
+            }
+            else
+            {
+                printf("\nError try again");
+            }
+        }
+
     }
-    
-    /// ==================
-    /// ASK FOR WHICH TOPIC FIRST BEFORE ADDING APPENDING GRADES
-    /// ==================
-    fclose(f);
-
-    int grade_amt;
-    printf("\nHow many grades would you like to add?\n");
-    scanf(" %d", &grade_amt);
-
+    while (!maincheck);
 }
 
 void AddClass()
