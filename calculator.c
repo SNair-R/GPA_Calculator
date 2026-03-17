@@ -3,6 +3,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <stdlib.h>
+#include "calculator.h"
 
 int ListClasses()
 {
@@ -71,6 +72,73 @@ void InitClass(FILE *f)
         fprintf(f,"#%s \n",topicname[i]); // uses stored names and writes topics with # as a prefix for identification
     }
     fclose(f);
+}
+
+ClassData CalcGrade(char filename[])
+{
+    char line[256];
+    int topics;
+    ClassData results;
+
+    FILE *f = fopen(filename, "r"); // open file and get credit hours
+    fgets(line, sizeof(line), f);
+    results.credits = atoi(line);
+
+    fgets(line, sizeof(line), f); // attain topic numbers
+    topics = atoi(line);
+    
+    int grades[topics];
+    memset(grades, 0, sizeof(grades));
+
+    int weights[topics];
+    int counter;
+    int offset;
+    int read;
+    int num;
+
+    for (int i = 0; i < topics; i ++) // attain the weight of each topic
+    {
+        fgets(line, sizeof(line), f);
+        sscanf(line, "%*s %d", &weights[i]);
+    }
+
+    fgets(line, sizeof(line), f); // skip grades
+
+    for (int i = 0; i < topics; i++) 
+    {
+        counter = 0, offset = 0, read = 0; num = 0;
+        fgets(line, sizeof(line), f); // get line, get offset to skip topic name
+        sscanf(line, "%*s %n", &offset); 
+        while(sscanf(line + offset, "%d%n", &num, &read) == 1) // add up grades until theres nothing left
+        {
+            grades[i] += num;
+            counter++;
+            offset += read;
+        }
+        if (counter > 0)
+        {
+            grades[i] /= counter;
+        }
+        else
+        {
+            grades[i] = 0;
+        }
+    }
+
+    float total = 0;
+    int totalweight = 0;
+
+    for (int i = 0; i < topics; i++)
+    {
+        total += grades[i] * weights[i];
+        totalweight += weights[i];
+    }
+    
+
+    results.grade = total / totalweight;
+    fclose(f);
+
+    return results;
 }
 
 void AddGrades()
@@ -263,4 +331,111 @@ void AddClass()
 
     InitClass(f); 
     return;
+}
+
+void DeleteClass()
+{
+    ListClasses();
+    char name[50];
+    char filename[100];
+    int checker = 0;
+    while (!checker) // get filename for the class
+    {
+        printf("Which Class would you like to delete?\n");
+        scanf(" %[^\n]",name);
+        sprintf(filename, "./Classes/%s.txt",name);
+        FILE *f = fopen(filename, "r");
+        if (f == NULL)
+        {
+            printf("Could not find class try again\n");
+        }
+        else
+        {
+            fclose(f);
+            checker++;
+        }
+    }
+
+    char confirmation;
+    int assurance = 0;
+    printf("\nAre you sure you want to delete %s?\n", name);
+    printf("This is irreversible\n");
+
+    while (!assurance)
+    {
+        printf("Type Y to delete %s or type N to stop\n",name);
+        scanf(" %c", &confirmation);  
+        if (confirmation == 'Y' || confirmation == 'y')
+        {
+            assurance++;
+        }
+        else if (confirmation == 'N' || confirmation == 'n')
+        {
+            printf("Deletion stopped\n");
+            break;
+        }
+        else
+        {
+            printf("Try again\n");
+            continue;
+        }
+    }
+    if (assurance)
+    {
+        remove(filename);
+        printf("%s has been removed\n",name);
+    }
+
+}
+
+void CalcGPA()
+{
+    DIR *dir = opendir("./Classes");
+    if (dir == NULL)
+    {
+        printf("No classes found\n");
+        return;
+    }
+    
+    int class_num = 0;
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (entry->d_name[0] != '.')
+        {
+            class_num++;
+        }
+    }
+    rewinddir(dir);
+
+    ClassData data[class_num];
+
+    char name[50];
+    char filename[class_num][100];
+    int i = 0;
+
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (entry->d_name[0] != '.')
+        {
+            strcpy(name, entry->d_name);
+            sprintf(filename[i], "./Classes/%s",name);
+            data[i] = CalcGrade(filename[i]);
+            i++;
+        }
+    }
+    closedir(dir);
+
+    float totalpoints = 0;
+    float totalweight = 0;
+    
+    for (int i = 0; i < class_num; i++)
+    {
+        totalpoints += data[i].grade * data[i].credits;
+        totalweight += data[i].credits;
+    }
+
+    float GPA = totalpoints / totalweight;
+    GPA = (GPA / 100.0) * 4.0;
+    printf("\nYour GPA is: %.2f\n", GPA);
 }
